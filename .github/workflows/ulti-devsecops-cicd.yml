@@ -132,7 +132,7 @@ jobs:
       # Trivy Backend Image Scan
       # =========================
       - name: Scan Backend Image
-        run: |
+ubuntu-latest        run: |
           trivy image \
           --severity HIGH,CRITICAL \
           --exit-code 0 \
@@ -167,86 +167,6 @@ jobs:
           name: sbom
           path: sbom.spdx.json
 
-# =========================
-# KUBERNETES CD
-# =========================
-  deploy:
-    name: Kubernetes Deployment
-    needs: ci-devsecops
-
-    runs-on: ubuntu-latest
-
-    timeout-minutes: 10
-
-    if: vars.DEPLOY_ENABLED == 'true'
-
-    steps:
-
-      # =========================
-      # Checkout
-      # =========================
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      # =========================
-      # Verify Kubernetes
-      # =========================
-      - name: Verify Cluster
-        run: |
-          kubectl get nodes
-          kubectl get ns
-
-      # =========================
-      # Deploy Backend
-      # =========================
-      - name: Update Backend Image
-        run: |
-          kubectl set image deployment/backend \
-          backend=${{ secrets.DOCKERHUB_USERNAME }}/skillpulse-backend:${{ github.sha }} \
-          -n ${NAMESPACE}
-
-      # =========================
-      # Deploy Frontend
-      # =========================
-      - name: Update Frontend Image
-        run: |
-          kubectl set image deployment/frontend \
-          frontend=${{ secrets.DOCKERHUB_USERNAME }}/skillpulse-frontend:${{ github.sha }} \
-          -n ${NAMESPACE}
-
-      # =========================
-      # Rollout Status
-      # =========================
-      - name: Wait Backend Rollout
-        run: |
-          kubectl rollout status deployment/backend \
-          -n ${NAMESPACE} \
-          --timeout=120s
-
-      - name: Wait Frontend Rollout
-        run: |
-          kubectl rollout status deployment/frontend \
-          -n ${NAMESPACE} \
-          --timeout=120s
-
-      # =========================
-      # Verify Pods
-      # =========================
-      - name: Verify Pods
-        run: |
-          kubectl get pods -n ${NAMESPACE}
-          kubectl get svc -n ${NAMESPACE}
-
-      # =========================
-      # Cleanup Docker
-      # =========================
-      - name: Cleanup Old Docker Images
-        run: |
-          docker image prune -af || true
-
-# =========================
 # OPTIONAL SECURITY JOBS
 # =========================
   security-report:
