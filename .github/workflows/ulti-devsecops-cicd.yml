@@ -67,7 +67,7 @@ jobs:
       # Install Trivy
       # =========================
       - name: Install Trivy
-        uses: aquasecurity/setup-trivy@v0.2.2
+        uses: aquasecurity/setup-trivy@v0.2.0
 
       # =========================
       # Docker Login
