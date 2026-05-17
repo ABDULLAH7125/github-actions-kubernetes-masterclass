@@ -24,6 +24,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+         go-version: 1.22
+         cache: true
 
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
@@ -44,7 +48,9 @@ jobs:
             ${{ env.DOCKER_USER }}/skillpulse-backend:latest
             ${{ env.DOCKER_USER }}/skillpulse-backend:${{ github.sha }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=max,compression=zstd,compression-level=3
+          build-args: |
+           BUILDKIT_INLINE_CACHE=1
 
   # =========================
   # FRONTEND BUILD
@@ -55,16 +61,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+         node-version: 22
+         cache: npm
+         cache-dependency-path: frontend/package-lock.json
+
 
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to DockerHub
-        if: ${{ vars.DEPLOY_ENABLED == 'true' }}
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+   #   - name: Login to DockerHub
+#        if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+#        uses: docker/login-action@v3
+#        with:
+  #        username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build & Push Frontend
         uses: docker/build-push-action@v5
@@ -75,4 +88,7 @@ jobs:
             ${{ env.DOCKER_USER }}/skillpulse-frontend:latest
             ${{ env.DOCKER_USER }}/skillpulse-frontend:${{ github.sha }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=max,compression=zstd,compression-level=3
+          build-args: |
+           BUILDKIT_INLINE_CACHE=1
+          
