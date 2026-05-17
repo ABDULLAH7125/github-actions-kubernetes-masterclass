@@ -132,7 +132,7 @@ jobs:
       # Trivy Backend Image Scan
       # =========================
       - name: Scan Backend Image
-ubuntu-latest        run: |
+        run: |
           trivy image \
           --severity HIGH,CRITICAL \
           --exit-code 0 \
