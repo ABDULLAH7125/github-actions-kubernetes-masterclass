@@ -46,3 +46,6 @@ jobs:
 
           cache-from: type=gha
           cache-to: type=gha,mode=maxi
+      - name: Trigger CD
+        if: success()
+        run: echo "CI completed"
