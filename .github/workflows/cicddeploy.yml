@@ -2,12 +2,12 @@ name: CD
 
 on:
   workflow_run:
-    workflows: ["CICD"]
+    workflows: ["CI"]
     types: [completed]
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted   # IMPORTANT (your cluster is local kind/EC2)
 
     steps:
       - uses: actions/checkout@v4
@@ -15,7 +15,10 @@ jobs:
       - name: Setup kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          export KUBECONFIG=~/.kube/config
+          kubectl config current-context
+          kubectl get nodes
 
       - name: Deploy to Kubernetes
         run: |
