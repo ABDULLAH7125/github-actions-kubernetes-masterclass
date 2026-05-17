@@ -1,12 +1,33 @@
-# Stage 1: Build
+# =========================
+# Stage 1: Builder
+# =========================
 FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 
-COPY . .
-RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o skillpulse .
+# Install git (needed for private/public deps sometimes)
+RUN apk add --no-cache git
 
-# Stage 2: Run
+# =========================
+# 1. COPY ONLY DEPENDENCIES FIRST (IMPORTANT FOR CACHE)
+# =========================
+COPY go.mod go.sum ./
+RUN go mod download
+
+# =========================
+# 2. COPY SOURCE CODE AFTER CACHE LAYER
+# =========================
+COPY . .
+
+# =========================
+# 3. BUILD (FAST + SMALL)
+# =========================
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" -o skillpulse .
+
+# =========================
+# Stage 2: Runtime
+# =========================
 FROM alpine:3.23
 
 RUN apk --no-cache add ca-certificates
