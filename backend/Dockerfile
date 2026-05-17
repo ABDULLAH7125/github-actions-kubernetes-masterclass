@@ -1,7 +1,7 @@
 # =========================
 # Stage 1: Builder
 # =========================
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26-alpine3.20 AS builder
 
 WORKDIR /app
 
@@ -28,7 +28,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
 # =========================
 # Stage 2: Runtime
 # =========================
-FROM alpine:3.23
+FROM alpine:3.20
 
 RUN apk --no-cache add ca-certificates
 
