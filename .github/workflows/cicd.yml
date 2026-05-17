@@ -1,9 +1,9 @@
-name: CICD
+name: CI
 
 on:
   push:
     branches: [main]
-  workflow_dispatch: 
+
 env:
   DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
 
