@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
 
 env:
-  DOCKER_USER: abdullahgour
-  BACKEND_IMAGE: abdullahgour/skillpulse-backend
-  FRONTEND_IMAGE: abdullahgour/skillpulse-frontend
+  DOCKER_USER: abdullah404
+  BACKEND_IMAGE: abdullah404/skillpulse-backend
+  FRONTEND_IMAGE: abdullah404/skillpulse-frontend
 
 jobs:
 
