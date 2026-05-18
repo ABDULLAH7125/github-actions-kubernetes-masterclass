@@ -1,14 +1,14 @@
 # =========================
 # Stage 1: Builder
 # =========================
-FROM golang:1.24.13-alpine3.21 AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
 # Install git
 RUN apk add --no-cache git
 
-# Copy go mod files
+# Copy go modules
 COPY go.mod go.sum ./
 
 # Download dependencies
@@ -18,7 +18,7 @@ RUN go mod download
 COPY . .
 
 # Build application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -o skillpulse .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o skillpulse .
 
 # =========================
 # Stage 2: Runtime
@@ -28,11 +28,13 @@ FROM alpine:3.21
 WORKDIR /app
 
 # Install certificates
-RUN apk --no-cache add ca-certificates
+RUN apk add --no-cache ca-certificates
 
-# Copy binary from builder
+# Copy binary
 COPY --from=builder /app/skillpulse .
 
+# Expose app port
 EXPOSE 8080
 
+# Run app
 CMD ["./skillpulse"]
