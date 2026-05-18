@@ -93,6 +93,14 @@ spec:
         - name: mysql
           image: mysql:8.4
           imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+             drop:
+               - ALL
           ports:
             - name: mysql
               containerPort: 3306
