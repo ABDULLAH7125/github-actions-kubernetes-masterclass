@@ -89,6 +89,9 @@ spec:
       labels:
         app: mysql
     spec:
+      securityContext:
+       runAsNonRoot: true
+       fsGroup: 999
       containers:
         - name: mysql
           image: mysql:8.4
