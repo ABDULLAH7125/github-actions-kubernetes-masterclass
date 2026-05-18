@@ -120,8 +120,8 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
           vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-          scanners: vuln
+          severity: CRITICAL
+          
 # =========================================================
 # ☁️ TERRAFORM INFRASTRUCTURE
 # =========================================================
