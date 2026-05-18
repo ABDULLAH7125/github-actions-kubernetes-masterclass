@@ -1,29 +1,19 @@
 # =========================
 # Stage 1: Builder
 # =========================
-# FROM golang:1.24-alpine3.20 AS builder
-# FROM golang:1.26-alpine3.20 AS builder
-FROM golang:1.25.7-alpine3.20 AS builder
+FROM golang:1.25-alpine3.20 AS builder
 
 WORKDIR /app
 
-# Install git (needed for private/public deps sometimes)
 RUN apk add --no-cache git
 
-# =========================
-# 1. COPY ONLY DEPENDENCIES FIRST (IMPORTANT FOR CACHE)
-# =========================
 COPY go.mod go.sum ./
+
+RUN go mod tidy
 RUN go mod download
 
-# =========================
-# 2. COPY SOURCE CODE AFTER CACHE LAYER
-# =========================
 COPY . .
 
-# =========================
-# 3. BUILD (FAST + SMALL)
-# =========================
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" -o skillpulse .
 
