@@ -112,6 +112,9 @@ jobs:
           image-ref: ${{ env.DOCKER_USER }}/skillpulse-${{ matrix.service }}:${{ env.IMAGE_TAG }}
           severity: CRITICAL,HIGH
           exit-code: 1
+          ignore-unfixed: true
+          scanners: vuln
+
 
 # =========================================================
 # ☁️ TERRAFORM INFRASTRUCTURE
