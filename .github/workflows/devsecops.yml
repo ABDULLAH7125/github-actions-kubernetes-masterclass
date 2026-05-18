@@ -1,0 +1,261 @@
+# =========================================================
+# 🚀 Enterprise DevOps Automation Pipeline
+# CI + DevSecOps + Terraform + ArgoCD + Observability
+# =========================================================
+
+name: Enterprise-DevOps-Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Select deployment environment"
+        required: true
+        default: "stg"
+        type: choice
+        options:
+          - dev
+          - stg
+          - prod
+
+env:
+  DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+  IMAGE_TAG: ${{ github.sha }}
+  ENVIRONMENT: ${{ github.event.inputs.environment }}
+
+# =========================================================
+# 🔐 DEVSECOPS STAGE
+# =========================================================
+
+jobs:
+
+  security:
+    name: DevSecOps Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Secret Scanning
+      - name: Gitleaks Scan
+        uses: gitleaks/gitleaks-action@v2
+
+      # File System Vulnerability Scan
+      - name: Trivy FS Scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+      # Kubernetes Manifest Scan
+      - name: Trivy K8s Config Scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+# =========================================================
+# 🏗 BUILD & PUSH DOCKER IMAGES
+# =========================================================
+
+  build:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: security
+
+    strategy:
+      matrix:
+        service:
+          - backend
+          - frontend
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Docker Login
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Docker Build
+      - name: Build & Push Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.DOCKER_USER }}/skillpulse-${{ matrix.service }}:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_USER }}/skillpulse-${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Image Security Scan
+      - name: Trivy Image Scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.DOCKER_USER }}/skillpulse-${{ matrix.service }}:${{ env.IMAGE_TAG }}
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+# =========================================================
+# ☁️ TERRAFORM INFRASTRUCTURE
+# =========================================================
+
+  terraform:
+    name: Terraform Infrastructure Provisioning
+    runs-on: ubuntu-latest
+    needs: build
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+# =========================================================
+# 🚀 ARGOCD GITOPS DEPLOYMENT
+# =========================================================
+
+  deploy:
+    name: ArgoCD GitOps Deployment
+    runs-on: self-hosted
+    needs: terraform
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Setup Kubeconfig
+      - name: Setup Kubernetes Config
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+
+      # Deploy Namespace
+      - name: Deploy Namespace
+        run: kubectl apply -f k8s/00-namespace.yaml
+
+      # ArgoCD Deployment
+      - name: Deploy ArgoCD Applications
+        run: |
+          kubectl apply -f argocd/backend-app.yaml
+          kubectl apply -f argocd/frontend-app.yaml
+
+      # Update Kubernetes Images
+      - name: Update Kubernetes Images
+        run: |
+          kubectl set image deployment/backend \
+          backend=${{ env.DOCKER_USER }}/skillpulse-backend:${{ env.IMAGE_TAG }} \
+          -n skillpulse
+
+          kubectl set image deployment/frontend \
+          frontend=${{ env.DOCKER_USER }}/skillpulse-frontend:${{ env.IMAGE_TAG }} \
+          -n skillpulse
+
+# =========================================================
+# 📊 OBSERVABILITY STACK
+# =========================================================
+
+  observability:
+    name: Monitoring & Observability
+    runs-on: self-hosted
+    needs: deploy
+
+    steps:
+      - name: Install Prometheus Stack
+        run: |
+          helm repo add prometheus-community \
+          https://prometheus-community.github.io/helm-charts
+
+          helm repo update
+
+          helm upgrade --install monitoring \
+          prometheus-community/kube-prometheus-stack \
+          -n monitoring --create-namespace
+
+      - name: Install Loki Logging
+        run: |
+          helm repo add grafana https://grafana.github.io/helm-charts
+
+          helm repo update
+
+          helm upgrade --install loki grafana/loki-stack \
+          -n monitoring
+
+# =========================================================
+# 💾 BACKUP AUTOMATION
+# =========================================================
+
+  backup:
+    name: Automated Backup System
+    runs-on: self-hosted
+    needs: deploy
+
+    steps:
+      - name: Backup Kubernetes Manifests
+        run: |
+          mkdir -p backups
+
+          kubectl get all -A -o yaml \
+          > backups/cluster-backup.yaml
+
+      - name: Backup Database
+        run: |
+          kubectl exec -it mysql-0 -n skillpulse -- \
+          mysqldump -u root -p${{ secrets.DB_PASSWORD }} \
+          skillpulse > backups/mysql-backup.sql
+
+# =========================================================
+# 📢 SUCCESS MESSAGE
+# =========================================================
+
+  success:
+    name: Pipeline Success
+    runs-on: ubuntu-latest
+    needs:
+      - security
+      - build
+      - terraform
+      - deploy
+      - observability
+      - backup
+
+    steps:
+      - name: Deployment Success
+        run: |
+          echo "🚀 Enterprise DevOps Pipeline Completed Successfully"
+          echo "✅ DevSecOps Enabled"
+          echo "✅ Terraform Infrastructure Ready"
+          echo "✅ ArgoCD GitOps Deployment Completed"
+          echo "✅ Observability Stack Installed"
+          echo "✅ Automated Backups Completed"
