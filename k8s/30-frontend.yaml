@@ -37,7 +37,7 @@ spec:
        fsGroup: 2000  
       containers:
         - name: frontend
-          image: abdullah404/skillpulse-frontend:f7daee89794b0c1c4b3e18c81e4b0fef51a6c544
+          image: abdullah404/skillpulse-frontend:3c5f9e91bef7fdae77aa61510b2a4bfc612528c0
           imagePullPolicy: IfNotPresent
           
           securityContext:
