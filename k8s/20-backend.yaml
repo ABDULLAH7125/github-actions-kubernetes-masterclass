@@ -35,7 +35,7 @@ spec:
        fsGroup: 2000
       containers:
         - name: backend
-          image: abdullah404/skillpulse-backend:666df6c39f2fe4b8736b55d565f9a38d00b6a22c
+          image: abdullah404/skillpulse-backend:287b7e37ef22ea063a5c13e59e1b6aeec019e3f8
           imagePullPolicy: IfNotPresent
           securityContext:
            runAsNonRoot: true
