@@ -239,13 +239,17 @@ jobs:
 
           kubectl get all -A -o yaml \
           > backups/cluster-backup.yaml
-
+    
       - name: Backup Database
         run: |
-          kubectl exec -it mysql-0 -n skillpulse -- \
-          mysqldump -u root -p${{ secrets.DB_PASSWORD }} \
-          skillpulse > backups/mysql-backup.sql
+          mkdir -p backups
+          PASS=$(kubectl get secret skillpulse-db -n skillpulse \
+          -o jsonpath="{.data.MYSQL_ROOT_PASSWORD}" | base64 -d)
 
+          kubectl exec mysql-0 -n skillpulse -- \
+          sh -c "mysqldump -u root -p$PASS skillpulse" \
+          > backups/mysql-backup.sql
+          
 # =========================================================
 # 📢 SUCCESS MESSAGE
 # =========================================================
