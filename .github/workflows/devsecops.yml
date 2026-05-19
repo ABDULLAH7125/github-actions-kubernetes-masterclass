@@ -171,7 +171,7 @@ jobs:
       - name: Setup Kubernetes Config
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
 
       # Deploy Namespace
       - name: Deploy Namespace
