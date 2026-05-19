@@ -171,8 +171,7 @@ jobs:
       - name: Setup Kubernetes Config
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
-
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
       # Deploy Namespace
       - name: Deploy Namespace
         run: kubectl apply -f k8s/00-namespace.yaml
